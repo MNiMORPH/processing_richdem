@@ -238,12 +238,23 @@ def depressions_from_gpkg(gpkg_path):
 
 
 def update_water_vol(deps, gpkg_path):
-    """Write updated water_vol values from a Depression list back to the GeoPackage."""
-    conn = sqlite3.connect(gpkg_path)
-    cur = conn.cursor()
-    cur.executemany(
-        "UPDATE depressions SET water_vol = ? WHERE dep_label = ?",
-        [(d.water_vol, d.dep_label) for d in deps],
-    )
-    conn.commit()
-    conn.close()
+    """Write updated water_vol values from a Depression list back to the GeoPackage.
+
+    Uses OGR (not raw sqlite3) so that GDAL's registered ST_ functions are
+    available to the GeoPackage geometry triggers on the depressions table.
+    """
+    from osgeo import ogr
+    ds = ogr.Open(gpkg_path, 1)   # 1 = update mode
+    if ds is None:
+        raise RuntimeError(f'Cannot open GeoPackage for update: {gpkg_path}')
+    layer = ds.GetLayerByName('depressions')
+    water_vols = {d.dep_label: d.water_vol for d in deps}
+    layer.ResetReading()
+    feature = layer.GetNextFeature()
+    while feature is not None:
+        label = feature.GetField('dep_label')
+        if label in water_vols:
+            feature.SetField('water_vol', water_vols[label])
+            layer.SetFeature(feature)
+        feature = layer.GetNextFeature()
+    ds = None
