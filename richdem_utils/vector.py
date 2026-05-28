@@ -163,8 +163,13 @@ def depressions_to_gpkg(deps, labels, output_path):
 
 
 def depressions_from_gpkg(gpkg_path):
-    """Read a GeoPackage depression hierarchy back into a Depression list."""
-    from _richdem.depression_hierarchy import Depression
+    """Read a GeoPackage depression hierarchy back into a Depression list.
+
+    The returned list is indexed by depression label (deps[label] == that
+    depression).  deps[0] is always the synthetic OCEAN pseudo-depression
+    required by FillSpillMerge's internal indexing.
+    """
+    from _richdem.depression_hierarchy import Depression, OCEAN
 
     conn = sqlite3.connect(gpkg_path)
     cur = conn.cursor()
@@ -192,14 +197,27 @@ def depressions_from_gpkg(gpkg_path):
     def restore_float(val):
         return float('inf') if val is None else float(val)
 
-    deps = []
+    # Determine the size of the deps vector (max label + 1).
+    if rows:
+        max_label = max(int(r[0]) for r in rows)
+    else:
+        max_label = 0
+
+    # Pre-allocate with default Depressions; deps[0] is the OCEAN sentinel.
+    ocean = Depression()
+    ocean.dep_label = int(OCEAN)  # 0
+    # The ocean_links table stores which real depressions overflow into OCEAN.
+    ocean.ocean_linked = ocean_linked.get(int(OCEAN), [])
+    deps = [ocean] + [Depression() for _ in range(max_label)]
+
     for row in rows:
         (dep_label, pit_cell, out_cell, parent, odep, lchild, rchild,
          geolink, pit_elev, out_elev, ocean_parent, cell_count,
          dep_vol, water_vol, total_elevation) = row
 
-        d = Depression()
-        d.dep_label       = int(dep_label)
+        idx = int(dep_label)
+        d = deps[idx]
+        d.dep_label       = idx
         d.pit_cell        = int(pit_cell)
         d.out_cell        = int(out_cell)
         d.parent          = restore_int(parent)
@@ -215,7 +233,6 @@ def depressions_from_gpkg(gpkg_path):
         d.water_vol       = float(water_vol)
         d.total_elevation = float(total_elevation)
         d.ocean_linked    = ocean_linked.get(dep_label, [])
-        deps.append(d)
 
     return deps
 
