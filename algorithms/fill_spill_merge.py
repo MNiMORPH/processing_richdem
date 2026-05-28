@@ -102,6 +102,20 @@ class FillSpillMergeAlgorithm(QgsProcessingAlgorithm):
         feedback.setProgress(30)
         rd.fill_spill_merge(dem, labels, flowdirs, deps, wtd)
 
+        # pybind11/stl.h copies the Depression vector in and out without
+        # writing back mutable-reference changes, so deps[i].water_vol is
+        # unchanged after the call.  Recompute from the output wtd array.
+        labels_arr = np.array(labels, dtype=np.int64)
+        wtd_arr    = np.array(wtd)
+        cell_area  = abs(dem.geotransform[1] * dem.geotransform[5])
+        label_to_dep = {d.dep_label: d for d in deps}
+        for dep_label in np.unique(labels_arr):
+            if dep_label in label_to_dep:
+                mask = labels_arr == dep_label
+                label_to_dep[dep_label].water_vol = float(
+                    np.sum(np.maximum(wtd_arr[mask], 0.0)) * cell_area
+                )
+
         feedback.setProgress(80)
         rdarray_to_file(wtd, output_wtd, projection=proj)
 
