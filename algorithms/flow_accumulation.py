@@ -72,7 +72,7 @@ class FlowAccumulationAlgorithm(QgsProcessingAlgorithm):
         output_path  = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
         exponent = None
-        if self.parameterAsDouble(parameters, self.EXPONENT, context) is not None:
+        if parameters.get(self.EXPONENT) not in (None, ''):
             exponent = self.parameterAsDouble(parameters, self.EXPONENT, context)
 
         if method in _EXPONENT_METHODS and exponent is None:
