@@ -5,10 +5,10 @@ import numpy as np
 from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingException,
-    QgsProcessingParameterFile,
     QgsProcessingParameterFileDestination,
     QgsProcessingParameterRasterDestination,
     QgsProcessingParameterRasterLayer,
+    QgsProcessingParameterVectorLayer,
 )
 
 
@@ -51,9 +51,8 @@ class FillSpillMergeAlgorithm(QgsProcessingAlgorithm):
             self.LABELS, 'Depression labels raster (from Depression Hierarchy)'))
         self.addParameter(QgsProcessingParameterRasterLayer(
             self.FLOWDIRS, 'Flow directions raster (from Depression Hierarchy)'))
-        self.addParameter(QgsProcessingParameterFile(
-            self.HIERARCHY, 'Depression hierarchy GeoPackage (from Depression Hierarchy)',
-            extension='gpkg'))
+        self.addParameter(QgsProcessingParameterVectorLayer(
+            self.HIERARCHY, 'Depression hierarchy GeoPackage (from Depression Hierarchy)'))
         self.addParameter(QgsProcessingParameterRasterLayer(
             self.WATER_DEPTH,
             'Input water depth raster (negative = below surface, positive = surface water)'))
@@ -77,7 +76,8 @@ class FillSpillMergeAlgorithm(QgsProcessingAlgorithm):
         dem_layer      = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         labels_layer   = self.parameterAsRasterLayer(parameters, self.LABELS, context)
         flowdirs_layer = self.parameterAsRasterLayer(parameters, self.FLOWDIRS, context)
-        hierarchy_path = self.parameterAsFile(parameters, self.HIERARCHY, context)
+        hierarchy_layer = self.parameterAsVectorLayer(parameters, self.HIERARCHY, context)
+        hierarchy_path  = hierarchy_layer.source().split('|')[0]
         wtd_layer      = self.parameterAsRasterLayer(parameters, self.WATER_DEPTH, context)
         output_wtd     = self.parameterAsOutputLayer(parameters, self.OUTPUT_WTD, context)
         output_hier    = self.parameterAsFileOutput(parameters, self.OUTPUT_HIERARCHY, context)
