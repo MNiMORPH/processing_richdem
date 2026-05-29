@@ -1,6 +1,7 @@
 import shutil
 
 import numpy as np
+from osgeo import gdal
 
 from qgis.core import (
     QgsProcessingAlgorithm,
@@ -95,6 +96,24 @@ class FillSpillMergeAlgorithm(QgsProcessingAlgorithm):
         feedback.setProgress(5)
         dem  = rdarray_from_layer(dem_layer)
         proj = getattr(dem, '_projection', None)
+
+        if wtd_layer is None and wtd_scalar == 0.0:
+            feedback.pushInfo(
+                'Water depth is zero everywhere — skipping FSM computation '
+                'and returning the input unchanged. (Your CPU thanks you.)')
+            rows, cols = dem.shape
+            ds = gdal.GetDriverByName('GTiff').Create(
+                output_wtd, cols, rows, 1, gdal.GDT_Float64)
+            ds.SetGeoTransform(dem.geotransform)
+            if proj:
+                ds.SetProjection(proj)
+            band = ds.GetRasterBand(1)
+            band.SetNoDataValue(-9999.0)
+            band.WriteArray(np.zeros((rows, cols), dtype=np.float64))
+            ds.FlushCache()
+            ds = None
+            shutil.copy2(hierarchy_path, output_hier)
+            return {self.OUTPUT_WTD: output_wtd, self.OUTPUT_HIERARCHY: output_hier}
 
         if wtd_layer is not None:
             wtd = rdarray_from_layer(wtd_layer)
