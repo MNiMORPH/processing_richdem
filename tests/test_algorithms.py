@@ -10,6 +10,14 @@ import numpy as np
 import pytest
 from osgeo import gdal
 
+try:
+    import _richdem as _rd_ext
+    HAS_RICHDEM = True
+    HAS_LINDSAY2016 = hasattr(_rd_ext, 'rdBreachDepressionsEpsD8')
+except ImportError:
+    HAS_RICHDEM = False
+    HAS_LINDSAY2016 = False
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -56,8 +64,8 @@ def run(alg_id, params):
 # ---------------------------------------------------------------------------
 
 class TestFillDepressions:
-    """Bowl DEM: border≈5, 3-ring, pit=1, channel at row 3 exits right border at 3.
-    Pour point = 3; only the pit cell is a true depression."""
+    """Bowl DEM: outer region=5, ring=9, pit=1, saddle=4.
+    Pour-point = 5 (border); fill raises pit and saddle to 5, ring (9) unchanged."""
 
     def test_output_created(self, bowl_layer, tmp_dir):
         """Filling a depressed DEM produces an output raster."""
@@ -68,15 +76,15 @@ class TestFillDepressions:
         assert gdal.Open(result['OUTPUT']) is not None
 
     def test_pit_raised_to_pour_point(self, bowl_layer, tmp_dir):
-        """Pit cell rises from 1 to the pour-point elevation (3); max stays 5."""
+        """Pit and saddle rise to pour-point (5); ring (9) is unchanged."""
         result = run('richdem:filldepressions', {
             'INPUT': bowl_layer, 'TOPOLOGY': 0, 'EPSILON': False,
             'OUTPUT': str(tmp_dir / 'filled2.tif'),
         })
         data, nodata = _read(result['OUTPUT'])
         valid = _valid(data, nodata)
-        assert valid.min() == pytest.approx(3.0)
-        assert valid.max() == pytest.approx(5.0)
+        assert valid.min() == pytest.approx(5.0)
+        assert valid.max() == pytest.approx(9.0)
 
     def test_fill_never_lowers(self, bowl_layer, bowl_tif, tmp_dir):
         """No cell is lowered by filling (filled − input ≥ 0 everywhere)."""
@@ -89,22 +97,27 @@ class TestFillDepressions:
         diff = _valid(filled - original, nodata)
         assert diff.min() >= 0.0, 'At least one cell was lowered by filling'
 
-    def test_epsilon_removes_flats(self, bowl_layer, tmp_dir):
-        """With epsilon, all filled cells are strictly above the pour point."""
+    def test_epsilon_flag_preserves_range(self, bowl_layer, tmp_dir):
+        """With epsilon, min stays at pour-point (5) and max stays at ring (9)."""
         result = run('richdem:filldepressions', {
             'INPUT': bowl_layer, 'TOPOLOGY': 0, 'EPSILON': True,
             'OUTPUT': str(tmp_dir / 'filled_eps.tif'),
         })
         data, nodata = _read(result['OUTPUT'])
-        assert _valid(data, nodata).min() >= 3.0
+        valid = _valid(data, nodata)
+        assert valid.min() >= 5.0
+        assert valid.max() == pytest.approx(9.0)
 
     def test_d4_topology(self, bowl_layer, tmp_dir):
-        """D4 topology completes without error."""
+        """D4 topology raises pit and saddle to pour-point (5); ring (9) unchanged."""
         result = run('richdem:filldepressions', {
             'INPUT': bowl_layer, 'TOPOLOGY': 1, 'EPSILON': False,
             'OUTPUT': str(tmp_dir / 'filled_d4.tif'),
         })
-        assert gdal.Open(result['OUTPUT']) is not None
+        data, nodata = _read(result['OUTPUT'])
+        valid = _valid(data, nodata)
+        assert valid.min() == pytest.approx(5.0)
+        assert valid.max() == pytest.approx(9.0)
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +125,9 @@ class TestFillDepressions:
 # ---------------------------------------------------------------------------
 
 class TestBreachDepressions:
+    """Bowl DEM: pit=1, saddle=4, ring=9, outer=5.
+    CompleteBreaching raises pit to saddle (4); fill raises to pour-point (5)."""
+
     def test_output_created(self, bowl_layer, tmp_dir):
         """Breaching produces an output raster."""
         result = run('richdem:breachdepressions', {
@@ -128,25 +144,100 @@ class TestBreachDepressions:
         data, _ = _read(result['OUTPUT'])
         assert data.shape == (7, 7)
 
-    def test_resolves_pit(self, bowl_layer, bowl_tif, tmp_dir):
-        """Breaching resolves the isolated pit.
-
-        The bowl DEM has a pre-existing channel at the pour-point elevation (3),
-        so RichDEM raises the pit to channel level rather than carving the
-        channel (fill is lower-cost than carve here).  After breaching:
-          - The pit cell must be strictly higher than before.
-          - No interior cell is lowered.
-        """
+    def test_pit_raised_to_saddle(self, bowl_layer, tmp_dir):
+        """CompleteBreaching raises pit to saddle (4); ring (9) is unchanged."""
         result = run('richdem:breachdepressions', {
             'INPUT': bowl_layer, 'TOPOLOGY': 0,
             'OUTPUT': str(tmp_dir / 'breached3.tif'),
         })
-        breached, nodata = _read(result['OUTPUT'])
-        original, _ = _read(bowl_tif)
-        assert breached[3, 3] > original[3, 3], \
-            f'Pit cell not raised (got {breached[3,3]}, expected > {original[3,3]})'
-        diff = breached[1:-1, 1:-1] - original[1:-1, 1:-1]
-        assert diff.min() >= 0.0, 'An interior cell was unexpectedly lowered'
+        data, nodata = _read(result['OUTPUT'])
+        valid = _valid(data, nodata)
+        assert valid.min() == pytest.approx(4.0)
+        assert valid.max() == pytest.approx(9.0)
+
+    def test_breach_below_pour_point(self, bowl_layer, tmp_dir):
+        """Breach min (4.0) is strictly below the fill pour-point (5.0).
+
+        Fill raises both pit and saddle to the border elevation (5); breach
+        raises the pit only to the saddle elevation (4), preserving the saddle.
+        """
+        result = run('richdem:breachdepressions', {
+            'INPUT': bowl_layer, 'TOPOLOGY': 0,
+            'OUTPUT': str(tmp_dir / 'breached4.tif'),
+        })
+        data, nodata = _read(result['OUTPUT'])
+        assert _valid(data, nodata).min() < 5.0, \
+            'min of breached DEM >= 5.0; pit was raised to pour-point (fill behaviour)'
+
+    def test_d4_topology(self, bowl_layer, tmp_dir):
+        """D4 topology raises pit to saddle (4); ring (9) unchanged."""
+        result = run('richdem:breachdepressions', {
+            'INPUT': bowl_layer, 'TOPOLOGY': 1,
+            'OUTPUT': str(tmp_dir / 'breached_d4.tif'),
+        })
+        data, nodata = _read(result['OUTPUT'])
+        valid = _valid(data, nodata)
+        assert valid.min() == pytest.approx(4.0)
+        assert valid.max() == pytest.approx(9.0)
+
+
+# ---------------------------------------------------------------------------
+# Breach Depressions — epsilon variant
+# ---------------------------------------------------------------------------
+
+@pytest.mark.skipif(
+    not HAS_LINDSAY2016,
+    reason='rdBreachDepressionsEpsD8 not available in this RichDEM build',
+)
+class TestBreachDepressionsEps:
+    """Lindsay2016 epsilon-gradient breaching: pit shallowed to just below saddle.
+
+    Bowl DEM: pit=1, saddle=4, ring=9, outer=5.
+    BreachDepressionsEps uses std::nextafter to raise the pit to
+    nextafter(4.0, -inf) ≈ 3.9999…, strictly below the saddle elevation.
+    This gives a binary min < 4.0, distinguishing it from CompleteBreaching
+    (min == 4.0) and fill (min == 5.0).
+    """
+
+    def test_output_created(self, bowl_layer, tmp_dir):
+        """Epsilon breaching produces an output raster."""
+        result = run('richdem:breachdepressions', {
+            'INPUT': bowl_layer, 'TOPOLOGY': 0, 'EPSILON': True,
+            'OUTPUT': str(tmp_dir / 'breached_eps.tif'),
+        })
+        assert gdal.Open(result['OUTPUT']) is not None
+
+    def test_epsilon_shallows_below_saddle(self, bowl_layer, tmp_dir):
+        """Pit is raised to nextafter(4.0, -inf); binary min < 4.0.
+
+        Unlike CompleteBreaching (min == 4.0), epsilon-gradient breaching
+        uses std::nextafter so the pit elevation is strictly below the saddle.
+        The difference from 4.0 is ~1 ULP (~1.8e-15), so we compare the
+        raw numpy float64 array rather than relying on text output.
+        """
+        result = run('richdem:breachdepressions', {
+            'INPUT': bowl_layer, 'TOPOLOGY': 0, 'EPSILON': True,
+            'OUTPUT': str(tmp_dir / 'breached_eps2.tif'),
+        })
+        data, nodata = _read(result['OUTPUT'])
+        valid = _valid(data, nodata)
+        assert valid.min() < 4.0, \
+            'binary min of eps-breached DEM >= 4.0; pit was not shallowed below saddle'
+
+    def test_eps_below_complete_breach(self, bowl_layer, tmp_dir):
+        """Epsilon min is strictly less than CompleteBreaching min (4.0)."""
+        result_eps = run('richdem:breachdepressions', {
+            'INPUT': bowl_layer, 'TOPOLOGY': 0, 'EPSILON': True,
+            'OUTPUT': str(tmp_dir / 'breached_eps3.tif'),
+        })
+        result_std = run('richdem:breachdepressions', {
+            'INPUT': bowl_layer, 'TOPOLOGY': 0, 'EPSILON': False,
+            'OUTPUT': str(tmp_dir / 'breached_std3.tif'),
+        })
+        eps_min = _valid(*_read(result_eps['OUTPUT'])).min()
+        std_min = _valid(*_read(result_std['OUTPUT'])).min()
+        assert eps_min < std_min, \
+            f'eps min ({eps_min}) not less than standard min ({std_min})'
 
 
 # ---------------------------------------------------------------------------
@@ -154,17 +245,63 @@ class TestBreachDepressions:
 # ---------------------------------------------------------------------------
 
 class TestResolveFlats:
-    def test_output_created(self, bowl_layer, tmp_dir):
-        """ResolveFlats on a pre-filled DEM produces output."""
-        filled = str(tmp_dir / 'rf_filled.tif')
-        run('richdem:filldepressions', {'INPUT': bowl_layer, 'TOPOLOGY': 0,
-                                        'EPSILON': False, 'OUTPUT': filled})
+    """Bowl DEM filled to pour-point (min=5, max=9), then flats resolved.
+
+    After filling, the outer region and former pit/saddle form a flat at 5.
+    ResolveFlats imposes a tiny gradient so all cells drain unambiguously;
+    no values should be introduced below the fill pour-point (5) or above
+    the ring elevation (9).
+    """
+
+    @pytest.fixture(scope='class')
+    def resolved_result(self, bowl_layer, tmp_dir):
         from qgis.core import QgsRasterLayer
-        result = run('richdem:resolveflats', {
-            'INPUT': QgsRasterLayer(filled, 'f'),
+        filled_path = str(tmp_dir / 'rf_filled.tif')
+        run('richdem:filldepressions', {
+            'INPUT': bowl_layer, 'TOPOLOGY': 0, 'EPSILON': False,
+            'OUTPUT': filled_path,
+        })
+        return run('richdem:resolveflats', {
+            'INPUT': QgsRasterLayer(filled_path, 'f'),
             'OUTPUT': str(tmp_dir / 'resolved.tif'),
         })
-        assert gdal.Open(result['OUTPUT']) is not None
+
+    def test_output_created(self, resolved_result):
+        """ResolveFlats on a pre-filled DEM produces output."""
+        assert gdal.Open(resolved_result['OUTPUT']) is not None
+
+    def test_no_nulls_introduced(self, resolved_result):
+        """ResolveFlats does not introduce nodata/NaN cells."""
+        data, nodata = _read(resolved_result['OUTPUT'])
+        valid = _valid(data, nodata)
+        assert len(valid) == data.size, \
+            'ResolveFlats introduced null cells'
+
+    def test_min_max_preserved(self, resolved_result):
+        """After resolving flats, min stays at pour-point (≥5) and max at ring (9)."""
+        data, nodata = _read(resolved_result['OUTPUT'])
+        valid = _valid(data, nodata)
+        assert valid.min() >= 5.0, \
+            'ResolveFlats lowered a cell below the fill pour-point (5)'
+        assert valid.max() == pytest.approx(9.0), \
+            'ResolveFlats changed the ring elevation (9)'
+
+    def test_d4_topology(self, bowl_layer, tmp_dir):
+        """D4-filled DEM resolves flats without error; range preserved."""
+        from qgis.core import QgsRasterLayer
+        filled_path = str(tmp_dir / 'rf_filled_d4.tif')
+        run('richdem:filldepressions', {
+            'INPUT': bowl_layer, 'TOPOLOGY': 1, 'EPSILON': False,
+            'OUTPUT': filled_path,
+        })
+        result = run('richdem:resolveflats', {
+            'INPUT': QgsRasterLayer(filled_path, 'f'),
+            'OUTPUT': str(tmp_dir / 'resolved_d4.tif'),
+        })
+        data, nodata = _read(result['OUTPUT'])
+        valid = _valid(data, nodata)
+        assert valid.min() >= 5.0
+        assert valid.max() == pytest.approx(9.0)
 
 
 # ---------------------------------------------------------------------------
@@ -329,6 +466,7 @@ class TestDepressionHierarchy:
     def test_hierarchy_schema_columns(self, dephier_result):
         """depressions table contains all expected schema columns."""
         required = {
+            'fid',
             'dep_label', 'type', 'pit_cell', 'out_cell',
             'parent', 'lchild', 'rchild', 'odep', 'geolink',
             'pit_elev', 'out_elev', 'ocean_parent',
