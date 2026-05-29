@@ -9,6 +9,8 @@ from qgis.core import (
 
 
 class BreachDepressionsAlgorithm(QgsProcessingAlgorithm):
+    """Least-cost depression breaching (Lindsay 2016 / Barnes 2016) via RichDEM."""
+
     INPUT    = 'INPUT'
     OUTPUT   = 'OUTPUT'
     TOPOLOGY = 'TOPOLOGY'

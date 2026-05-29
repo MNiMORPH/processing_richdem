@@ -16,6 +16,8 @@ _EXPONENT_METHODS = {'Holmgren', 'Freeman'}
 
 
 class FlowAccumulationAlgorithm(QgsProcessingAlgorithm):
+    """Flow accumulation using any of 13 RichDEM flow-routing methods."""
+
     INPUT    = 'INPUT'
     OUTPUT   = 'OUTPUT'
     METHOD   = 'METHOD'

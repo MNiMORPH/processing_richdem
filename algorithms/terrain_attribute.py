@@ -14,6 +14,8 @@ _ATTRIBUTES = [
 
 
 class TerrainAttributeAlgorithm(QgsProcessingAlgorithm):
+    """Compute slope, aspect, or curvature from a DEM via RichDEM."""
+
     INPUT     = 'INPUT'
     OUTPUT    = 'OUTPUT'
     ATTRIBUTE = 'ATTRIBUTE'

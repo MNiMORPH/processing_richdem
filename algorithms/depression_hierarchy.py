@@ -8,6 +8,8 @@ from qgis.core import (
 
 
 class DepressionHierarchyAlgorithm(QgsProcessingAlgorithm):
+    """Build a RichDEM depression hierarchy (Barnes 2020) for Fill-Spill-Merge."""
+
     INPUT            = 'INPUT'
     OUTPUT_LABELS    = 'OUTPUT_LABELS'
     OUTPUT_FLOWDIRS  = 'OUTPUT_FLOWDIRS'

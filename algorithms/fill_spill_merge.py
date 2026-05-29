@@ -15,6 +15,8 @@ from qgis.core import (
 
 
 class FillSpillMergeAlgorithm(QgsProcessingAlgorithm):
+    """Distribute water across a DEM using Fill-Spill-Merge (Barnes 2020)."""
+
     INPUT            = 'INPUT'
     LABELS           = 'LABELS'
     FLOWDIRS         = 'FLOWDIRS'

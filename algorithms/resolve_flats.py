@@ -7,6 +7,8 @@ from qgis.core import (
 
 
 class ResolveFlatsAlgorithm(QgsProcessingAlgorithm):
+    """Add gradient to flat regions so flow can be routed through them (Barnes 2014)."""
+
     INPUT  = 'INPUT'
     OUTPUT = 'OUTPUT'
 

@@ -9,6 +9,8 @@ from qgis.core import (
 
 
 class FillDepressionsAlgorithm(QgsProcessingAlgorithm):
+    """Priority-Flood depression filling (Barnes 2014) via RichDEM."""
+
     INPUT    = 'INPUT'
     OUTPUT   = 'OUTPUT'
     TOPOLOGY = 'TOPOLOGY'
