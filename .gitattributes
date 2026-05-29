@@ -1,0 +1,7 @@
+# Files excluded from `git archive` (and therefore from the QGIS plugin ZIP)
+tests/          export-ignore
+hooks/          export-ignore
+.github/        export-ignore
+pyproject.toml  export-ignore
+.gitattributes  export-ignore
+.gitignore      export-ignore
