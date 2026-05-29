@@ -2,9 +2,7 @@
 
 import math
 import os
-import shutil
 import sqlite3
-import tempfile
 from collections import defaultdict
 
 import numpy as np

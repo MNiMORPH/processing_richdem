@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Install: ln -s ../../hooks/pre-push .git/hooks/pre-push
+set -e
+echo "Running ruff lint check before push..."
+ruff check .
+echo "Lint passed."
