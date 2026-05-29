@@ -1,5 +1,6 @@
 from qgis.core import (
     QgsProcessingAlgorithm,
+    QgsProcessingContext,
     QgsProcessingException,
     QgsProcessingParameterFileDestination,
     QgsProcessingParameterRasterDestination,
@@ -81,6 +82,11 @@ class DepressionHierarchyAlgorithm(QgsProcessingAlgorithm):
         feedback.setProgress(70)
         depressions_to_gpkg(deps, labels, hierarchy_path)
         feedback.setProgress(100)
+
+        context.addLayerToLoadOnCompletion(
+            hierarchy_path,
+            QgsProcessingContext.LayerDetails(
+                'Depression Hierarchy', context.project(), self.OUTPUT_HIERARCHY))
 
         return {
             self.OUTPUT_LABELS:    labels_path,
