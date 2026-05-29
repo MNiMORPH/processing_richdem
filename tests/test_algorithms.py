@@ -566,3 +566,26 @@ class TestFillSpillMerge:
         data, nodata = _read(result['OUTPUT_WTD'])
         assert data.shape == (7, 7)
         assert len(_valid(data, nodata)) > 0
+
+    def test_zero_water_depth_bypasses_fsm(self, bowl_layer, tmp_dir):
+        """Water depth of zero skips FSM and returns a zero WTD raster."""
+        from qgis.core import QgsRasterLayer
+
+        hier = run('richdem:depressionhierarchy', {
+            'INPUT':            bowl_layer,
+            'OUTPUT_LABELS':    str(tmp_dir / 'fsm_zero_labels.tif'),
+            'OUTPUT_FLOWDIRS':  str(tmp_dir / 'fsm_zero_flowdirs.tif'),
+            'OUTPUT_HIERARCHY': str(tmp_dir / 'fsm_zero_hier_in.gpkg'),
+        })
+        result = run('richdem:fillspillmerge', {
+            'INPUT':              bowl_layer,
+            'LABELS':             QgsRasterLayer(hier['OUTPUT_LABELS'],  'l'),
+            'FLOWDIRS':           QgsRasterLayer(hier['OUTPUT_FLOWDIRS'], 'f'),
+            'HIERARCHY':          hier['OUTPUT_HIERARCHY'],
+            'WATER_DEPTH_SCALAR': 0.0,
+            'OUTPUT_WTD':         str(tmp_dir / 'wtd_zero_out.tif'),
+            'OUTPUT_HIERARCHY':   str(tmp_dir / 'fsm_zero_hier_out.gpkg'),
+        })
+        data, nodata = _read(result['OUTPUT_WTD'])
+        assert _valid(data, nodata).max() == pytest.approx(0.0), \
+            'Expected all-zero WTD when water depth is zero'
