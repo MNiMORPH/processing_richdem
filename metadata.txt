@@ -20,6 +20,14 @@ tags=raster,terrain,hydrology,dem,flow accumulation,depression,geomorphology
 homepage=https://github.com/MNiMORPH/processing_richdem
 category=Raster
 icon=icon.png
+changelog=0.1.0 - Initial release
+    - Fill Depressions (Priority-Flood, Barnes 2014; D8/D4, optional epsilon gradient)
+    - Breach Depressions (Lindsay 2016 / Barnes 2016; D8/D4, optional epsilon variant)
+    - Resolve Flats (Barnes 2014)
+    - Flow Accumulation (13 flow-routing methods)
+    - Terrain Attribute (slope, aspect, curvature)
+    - Depression Hierarchy (Barnes 2020; GeoPackage output)
+    - Fill-Spill-Merge (Barnes 2020; raster or scalar water depth)
 experimental=True
 deprecated=False
 hasProcessingProvider=yes
