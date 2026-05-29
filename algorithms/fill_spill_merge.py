@@ -6,10 +6,10 @@ from osgeo import gdal
 from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingException,
-    QgsProcessingParameterFileDestination,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
     QgsProcessingParameterRasterLayer,
+    QgsProcessingParameterVectorDestination,
     QgsProcessingParameterVectorLayer,
 )
 
@@ -68,10 +68,9 @@ class FillSpillMergeAlgorithm(QgsProcessingAlgorithm):
             defaultValue=0.0))
         self.addParameter(QgsProcessingParameterRasterDestination(
             self.OUTPUT_WTD, 'Output water depth raster after redistribution'))
-        self.addParameter(QgsProcessingParameterFileDestination(
+        self.addParameter(QgsProcessingParameterVectorDestination(
             self.OUTPUT_HIERARCHY,
-            'Output hierarchy GeoPackage with updated water volumes',
-            fileFilter='GeoPackage (*.gpkg)'))
+            'Output hierarchy GeoPackage with updated water volumes'))
 
     def processAlgorithm(self, parameters, context, feedback):
         try:
@@ -91,7 +90,7 @@ class FillSpillMergeAlgorithm(QgsProcessingAlgorithm):
         wtd_layer      = self.parameterAsRasterLayer(parameters, self.WATER_DEPTH, context)
         wtd_scalar     = self.parameterAsDouble(parameters, self.WATER_DEPTH_SCALAR, context)
         output_wtd     = self.parameterAsOutputLayer(parameters, self.OUTPUT_WTD, context)
-        output_hier    = self.parameterAsFileOutput(parameters, self.OUTPUT_HIERARCHY, context)
+        output_hier    = self.parameterAsOutputLayer(parameters, self.OUTPUT_HIERARCHY, context)
 
         feedback.setProgress(5)
         dem  = rdarray_from_layer(dem_layer)
