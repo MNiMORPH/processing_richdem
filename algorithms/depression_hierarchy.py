@@ -1,10 +1,9 @@
 from qgis.core import (
     QgsProcessingAlgorithm,
-    QgsProcessingContext,
     QgsProcessingException,
-    QgsProcessingParameterFileDestination,
     QgsProcessingParameterRasterDestination,
     QgsProcessingParameterRasterLayer,
+    QgsProcessingParameterVectorDestination,
 )
 
 
@@ -42,10 +41,9 @@ class DepressionHierarchyAlgorithm(QgsProcessingAlgorithm):
             self.OUTPUT_LABELS, 'Output depression labels raster'))
         self.addParameter(QgsProcessingParameterRasterDestination(
             self.OUTPUT_FLOWDIRS, 'Output flow directions raster'))
-        self.addParameter(QgsProcessingParameterFileDestination(
+        self.addParameter(QgsProcessingParameterVectorDestination(
             self.OUTPUT_HIERARCHY,
-            'Output depression hierarchy GeoPackage',
-            fileFilter='GeoPackage (*.gpkg)'))
+            'Output depression hierarchy GeoPackage'))
 
     def processAlgorithm(self, parameters, context, feedback):
         try:
@@ -60,7 +58,7 @@ class DepressionHierarchyAlgorithm(QgsProcessingAlgorithm):
         dem_layer        = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         labels_path      = self.parameterAsOutputLayer(parameters, self.OUTPUT_LABELS, context)
         flowdirs_path    = self.parameterAsOutputLayer(parameters, self.OUTPUT_FLOWDIRS, context)
-        hierarchy_path   = self.parameterAsFileOutput(parameters, self.OUTPUT_HIERARCHY, context)
+        hierarchy_path   = self.parameterAsOutputLayer(parameters, self.OUTPUT_HIERARCHY, context)
 
         feedback.setProgress(5)
         dem = rdarray_from_layer(dem_layer)
@@ -82,11 +80,6 @@ class DepressionHierarchyAlgorithm(QgsProcessingAlgorithm):
         feedback.setProgress(70)
         depressions_to_gpkg(deps, labels, hierarchy_path)
         feedback.setProgress(100)
-
-        context.addLayerToLoadOnCompletion(
-            hierarchy_path,
-            QgsProcessingContext.LayerDetails(
-                'Depression Hierarchy', context.project(), self.OUTPUT_HIERARCHY))
 
         return {
             self.OUTPUT_LABELS:    labels_path,
