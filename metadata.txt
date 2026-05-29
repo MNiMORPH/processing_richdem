@@ -6,9 +6,14 @@ version=0.1.0
 author=Andy Wickert
 email=andrewwickert@gmail.com
 about=A QGIS Processing provider exposing seven terrain-analysis algorithms from the
-    RichDEM library: depression filling, depression breaching, flat resolution, flow
-    accumulation, terrain attributes, depression hierarchy, and Fill-Spill-Merge surface
-    water routing. Requires the richdem Python package (pip install richdem).
+    RichDEM library: depression filling, depression breaching (including epsilon-gradient
+    variant), flat resolution, flow accumulation, terrain attributes, depression hierarchy,
+    and Fill-Spill-Merge surface water routing.
+
+    EXTERNAL DEPENDENCY: The richdem Python package must be installed before use.
+    In the OSGeo4W shell (Windows) or a terminal (Linux/macOS) run:
+        pip install richdem
+    The plugin will raise an informative error if richdem is not found.
 tracker=https://github.com/MNiMORPH/processing_richdem/issues
 repository=https://github.com/MNiMORPH/processing_richdem
 tags=raster,terrain,hydrology,dem,flow accumulation,depression,geomorphology
