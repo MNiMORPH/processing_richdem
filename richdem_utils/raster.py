@@ -36,7 +36,7 @@ def rdarray_to_file(rda, output_path, projection=None):
     if projection:
         ds.SetProjection(projection)
     band = ds.GetRasterBand(1)
-    band.WriteArray(data)
     band.SetNoDataValue(_NO_DATA)
+    band.WriteArray(data)
     ds.FlushCache()
     ds = None
