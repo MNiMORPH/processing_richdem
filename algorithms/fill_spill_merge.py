@@ -6,6 +6,7 @@ from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingException,
     QgsProcessingParameterFileDestination,
+    QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
     QgsProcessingParameterRasterLayer,
     QgsProcessingParameterVectorLayer,
@@ -18,6 +19,7 @@ class FillSpillMergeAlgorithm(QgsProcessingAlgorithm):
     FLOWDIRS         = 'FLOWDIRS'
     HIERARCHY        = 'HIERARCHY'
     WATER_DEPTH      = 'WATER_DEPTH'
+    WATER_DEPTH_SCALAR = 'WATER_DEPTH_SCALAR'
     OUTPUT_WTD       = 'OUTPUT_WTD'
     OUTPUT_HIERARCHY = 'OUTPUT_HIERARCHY'
 
@@ -53,9 +55,16 @@ class FillSpillMergeAlgorithm(QgsProcessingAlgorithm):
             self.FLOWDIRS, 'Flow directions raster (from Depression Hierarchy)'))
         self.addParameter(QgsProcessingParameterVectorLayer(
             self.HIERARCHY, 'Depression hierarchy GeoPackage (from Depression Hierarchy)'))
-        self.addParameter(QgsProcessingParameterRasterLayer(
+        water_depth = QgsProcessingParameterRasterLayer(
             self.WATER_DEPTH,
-            'Input water depth raster (negative = below surface, positive = surface water)'))
+            'Input water depth raster (negative = below surface, positive = surface water)',
+            optional=True)
+        self.addParameter(water_depth)
+        self.addParameter(QgsProcessingParameterNumber(
+            self.WATER_DEPTH_SCALAR,
+            'Uniform water depth scalar (used if no raster supplied)',
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=0.0))
         self.addParameter(QgsProcessingParameterRasterDestination(
             self.OUTPUT_WTD, 'Output water depth raster after redistribution'))
         self.addParameter(QgsProcessingParameterFileDestination(
@@ -79,13 +88,21 @@ class FillSpillMergeAlgorithm(QgsProcessingAlgorithm):
         hierarchy_layer = self.parameterAsVectorLayer(parameters, self.HIERARCHY, context)
         hierarchy_path  = hierarchy_layer.source().split('|')[0]
         wtd_layer      = self.parameterAsRasterLayer(parameters, self.WATER_DEPTH, context)
+        wtd_scalar     = self.parameterAsDouble(parameters, self.WATER_DEPTH_SCALAR, context)
         output_wtd     = self.parameterAsOutputLayer(parameters, self.OUTPUT_WTD, context)
         output_hier    = self.parameterAsFileOutput(parameters, self.OUTPUT_HIERARCHY, context)
 
         feedback.setProgress(5)
-        dem      = rdarray_from_layer(dem_layer)
-        wtd      = rdarray_from_layer(wtd_layer)
-        proj     = getattr(dem, '_projection', None)
+        dem  = rdarray_from_layer(dem_layer)
+        proj = getattr(dem, '_projection', None)
+
+        if wtd_layer is not None:
+            wtd = rdarray_from_layer(wtd_layer)
+        else:
+            wtd = rd.rdarray(
+                np.full(dem.shape, wtd_scalar, dtype=np.float64),
+                no_data=-9999.0, geotransform=dem.geotransform)
+            wtd._projection = proj
 
         # FSM requires labels as uint32 and flowdirs as int8;
         # rdarray_from_layer reads float64, so we cast after reading.
