@@ -3,8 +3,8 @@ name=RichDEM Terrain Analysis
 qgisMinimumVersion=3.16
 description=Terrain analysis algorithms from the RichDEM library
 version=0.1.0
-author=Andy Wickert
-email=andrewwickert@gmail.com
+author=Andrew D. Wickert
+email=awickert@umn.edu
 about=A QGIS Processing provider exposing seven terrain-analysis algorithms from the
     RichDEM library: depression filling, depression breaching (including epsilon-gradient
     variant), flat resolution, flow accumulation, terrain attributes, depression hierarchy,
@@ -17,7 +17,7 @@ about=A QGIS Processing provider exposing seven terrain-analysis algorithms from
 tracker=https://github.com/MNiMORPH/processing_richdem/issues
 repository=https://github.com/MNiMORPH/processing_richdem
 tags=raster,terrain,hydrology,dem,flow accumulation,depression,geomorphology
-homepage=https://github.com/awickert/processing_richdem
+homepage=https://github.com/MNiMORPH/processing_richdem
 category=Raster
 icon=
 experimental=True
