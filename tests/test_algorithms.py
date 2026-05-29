@@ -543,3 +543,26 @@ class TestFillSpillMerge:
         conn.close()
         assert any(v > 0 for v in vols), \
             f'No depression gained water after FSM: water_vols={vols}'
+
+    def test_scalar_water_depth(self, bowl_layer, tmp_dir):
+        """FSM accepts a uniform scalar instead of a water-depth raster."""
+        from qgis.core import QgsRasterLayer
+
+        hier = run('richdem:depressionhierarchy', {
+            'INPUT':            bowl_layer,
+            'OUTPUT_LABELS':    str(tmp_dir / 'fsm_scalar_labels.tif'),
+            'OUTPUT_FLOWDIRS':  str(tmp_dir / 'fsm_scalar_flowdirs.tif'),
+            'OUTPUT_HIERARCHY': str(tmp_dir / 'fsm_scalar_hier_in.gpkg'),
+        })
+        result = run('richdem:fillspillmerge', {
+            'INPUT':              bowl_layer,
+            'LABELS':             QgsRasterLayer(hier['OUTPUT_LABELS'],  'l'),
+            'FLOWDIRS':           QgsRasterLayer(hier['OUTPUT_FLOWDIRS'], 'f'),
+            'HIERARCHY':          hier['OUTPUT_HIERARCHY'],
+            'WATER_DEPTH_SCALAR': 0.5,
+            'OUTPUT_WTD':         str(tmp_dir / 'wtd_scalar_out.tif'),
+            'OUTPUT_HIERARCHY':   str(tmp_dir / 'fsm_scalar_hier_out.gpkg'),
+        })
+        data, nodata = _read(result['OUTPUT_WTD'])
+        assert data.shape == (7, 7)
+        assert len(_valid(data, nodata)) > 0
