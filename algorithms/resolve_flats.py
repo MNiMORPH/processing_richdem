@@ -27,12 +27,19 @@ class ResolveFlatsAlgorithm(QgsProcessingAlgorithm):
     def shortHelpString(self):
         return (
             'Impose an epsilon gradient on flat areas of a DEM to ensure '
-            'unique flow directions.\n\nRequires: pip install richdem'
+            'unique flow directions (Barnes et al. 2014).\n\n'
+            'Flat areas commonly arise after depression filling or breaching. '
+            'Run Fill Depressions or Breach Depressions first, then apply '
+            'this tool to the conditioned DEM before computing flow '
+            'accumulation or other derivatives.\n\n'
+            'Not required before Depression Hierarchy, which handles flats '
+            'internally.\n\n'
+            'Requires: pip install richdem'
         )
 
     def initAlgorithm(self, config=None):
         self.addParameter(QgsProcessingParameterRasterLayer(
-            self.INPUT, 'Input elevation raster'))
+            self.INPUT, 'Input elevation raster (filled or breached)'))
         self.addParameter(QgsProcessingParameterRasterDestination(
             self.OUTPUT, 'Output elevation raster with resolved flats'))
 
