@@ -64,8 +64,8 @@ def run(alg_id, params):
 # ---------------------------------------------------------------------------
 
 class TestFillDepressions:
-    """Bowl DEM: outer region=5, ring=9, pit=1, saddle=4.
-    Pour-point = 5 (border); fill raises pit and saddle to 5, ring (9) unchanged."""
+    """Bowl DEM: outer region=5, ring=9, pit=1, step=4.
+    Pour-point = 5 (border); fill raises pit and step to 5, ring (9) unchanged."""
 
     def test_output_created(self, bowl_layer, tmp_dir):
         """Filling a depressed DEM produces an output raster."""
@@ -76,7 +76,7 @@ class TestFillDepressions:
         assert gdal.Open(result['OUTPUT']) is not None
 
     def test_pit_raised_to_pour_point(self, bowl_layer, tmp_dir):
-        """Pit and saddle rise to pour-point (5); ring (9) is unchanged."""
+        """Pit and step rise to pour-point (5); ring (9) is unchanged."""
         result = run('richdem:filldepressions', {
             'INPUT': bowl_layer, 'TOPOLOGY': 0, 'EPSILON': False,
             'OUTPUT': str(tmp_dir / 'filled2.tif'),
@@ -109,7 +109,7 @@ class TestFillDepressions:
         assert valid.max() == pytest.approx(9.0)
 
     def test_d4_topology(self, bowl_layer, tmp_dir):
-        """D4 topology raises pit and saddle to pour-point (5); ring (9) unchanged."""
+        """D4 topology raises pit and step to pour-point (5); ring (9) unchanged."""
         result = run('richdem:filldepressions', {
             'INPUT': bowl_layer, 'TOPOLOGY': 1, 'EPSILON': False,
             'OUTPUT': str(tmp_dir / 'filled_d4.tif'),
@@ -125,8 +125,8 @@ class TestFillDepressions:
 # ---------------------------------------------------------------------------
 
 class TestBreachDepressions:
-    """Bowl DEM: pit=1, saddle=4, ring=9, outer=5.
-    CompleteBreaching raises pit to saddle (4); fill raises to pour-point (5)."""
+    """Bowl DEM: pit=1, step=4, ring=9, outer=5.
+    CompleteBreaching raises pit to step (4); fill raises to pour-point (5)."""
 
     def test_output_created(self, bowl_layer, tmp_dir):
         """Breaching produces an output raster."""
@@ -144,8 +144,8 @@ class TestBreachDepressions:
         data, _ = _read(result['OUTPUT'])
         assert data.shape == (7, 7)
 
-    def test_pit_raised_to_saddle(self, bowl_layer, tmp_dir):
-        """CompleteBreaching raises pit to saddle (4); ring (9) is unchanged."""
+    def test_pit_raised_to_step_elevation(self, bowl_layer, tmp_dir):
+        """CompleteBreaching raises pit to step (4); ring (9) is unchanged."""
         result = run('richdem:breachdepressions', {
             'INPUT': bowl_layer, 'TOPOLOGY': 0,
             'OUTPUT': str(tmp_dir / 'breached3.tif'),
@@ -158,8 +158,8 @@ class TestBreachDepressions:
     def test_breach_below_pour_point(self, bowl_layer, tmp_dir):
         """Breach min (4.0) is strictly below the fill pour-point (5.0).
 
-        Fill raises both pit and saddle to the border elevation (5); breach
-        raises the pit only to the saddle elevation (4), preserving the saddle.
+        Fill raises both pit and step to the border elevation (5); breach
+        raises the pit only to the step elevation (4), preserving the step.
         """
         result = run('richdem:breachdepressions', {
             'INPUT': bowl_layer, 'TOPOLOGY': 0,
@@ -170,7 +170,7 @@ class TestBreachDepressions:
             'min of breached DEM >= 5.0; pit was raised to pour-point (fill behaviour)'
 
     def test_d4_topology(self, bowl_layer, tmp_dir):
-        """D4 topology raises pit to saddle (4); ring (9) unchanged."""
+        """D4 topology raises pit to step (4); ring (9) unchanged."""
         result = run('richdem:breachdepressions', {
             'INPUT': bowl_layer, 'TOPOLOGY': 1,
             'OUTPUT': str(tmp_dir / 'breached_d4.tif'),
@@ -190,11 +190,11 @@ class TestBreachDepressions:
     reason='rdBreachDepressionsEpsD8 not available in this RichDEM build',
 )
 class TestBreachDepressionsEps:
-    """Lindsay2016 epsilon-gradient breaching: pit shallowed to just below saddle.
+    """Lindsay2016 epsilon-gradient breaching: pit shallowed to just below step.
 
-    Bowl DEM: pit=1, saddle=4, ring=9, outer=5.
+    Bowl DEM: pit=1, step=4, ring=9, outer=5.
     BreachDepressionsEps uses std::nextafter to raise the pit to
-    nextafter(4.0, -inf) ≈ 3.9999…, strictly below the saddle elevation.
+    nextafter(4.0, -inf) ≈ 3.9999…, strictly below the step elevation.
     This gives a binary min < 4.0, distinguishing it from CompleteBreaching
     (min == 4.0) and fill (min == 5.0).
     """
@@ -207,11 +207,11 @@ class TestBreachDepressionsEps:
         })
         assert gdal.Open(result['OUTPUT']) is not None
 
-    def test_epsilon_shallows_below_saddle(self, bowl_layer, tmp_dir):
+    def test_epsilon_shallows_below_step_elevation(self, bowl_layer, tmp_dir):
         """Pit is raised to nextafter(4.0, -inf); binary min < 4.0.
 
         Unlike CompleteBreaching (min == 4.0), epsilon-gradient breaching
-        uses std::nextafter so the pit elevation is strictly below the saddle.
+        uses std::nextafter so the pit elevation is strictly below the step.
         The difference from 4.0 is ~1 ULP (~1.8e-15), so we compare the
         raw numpy float64 array rather than relying on text output.
         """
@@ -222,7 +222,7 @@ class TestBreachDepressionsEps:
         data, nodata = _read(result['OUTPUT'])
         valid = _valid(data, nodata)
         assert valid.min() < 4.0, \
-            'binary min of eps-breached DEM >= 4.0; pit was not shallowed below saddle'
+            'binary min of eps-breached DEM >= 4.0; pit was not shallowed below step'
 
     def test_eps_below_complete_breach(self, bowl_layer, tmp_dir):
         """Epsilon min is strictly less than CompleteBreaching min (4.0)."""
@@ -247,7 +247,7 @@ class TestBreachDepressionsEps:
 class TestResolveFlats:
     """Bowl DEM filled to pour-point (min=5, max=9), then flats resolved.
 
-    After filling, the outer region and former pit/saddle form a flat at 5.
+    After filling, the outer region and former pit/step form a flat at 5.
     ResolveFlats imposes a tiny gradient so all cells drain unambiguously;
     no values should be introduced below the fill pour-point (5) or above
     the ring elevation (9).

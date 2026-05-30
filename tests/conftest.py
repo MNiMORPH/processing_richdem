@@ -7,17 +7,17 @@ Bowl DEM (7×7, 1 m resolution) — used for fill/breach/dephier/fsm:
     5 5 5 5 5 5 5
     5 5 3 3 3 5 5
     5 5 9 9 9 5 5
-    5 5 9 1 4 5 5   <- pit=1, saddle=4 adjacent to outer region (5)
+    5 5 9 1 4 5 5   <- pit=1, step=4 adjacent to outer region (5)
     5 5 9 9 9 5 5
     5 5 5 5 5 5 5
     5 5 5 5 5 5 5
 
-The 1-cell-wide inner ring (9) encloses the pit (1) except for the saddle
+The 1-cell-wide inner ring (9) encloses the pit (1) except for the step
 (4), which sits directly between the pit and the outer region (5).  All
 three depression-resolving algorithms produce distinct, comparable results:
-  fill              => min=5.0 (pit and saddle raised to pour-point 5)
-  CompleteBreaching => min=4.0 (pit raised to saddle; saddle preserved)
-  Lindsay2016 eps   => min<4.0 (pit shallowed to just below saddle)
+  fill              => min=5.0 (pit and step raised to pour-point 5)
+  CompleteBreaching => min=4.0 (pit raised to step; step preserved)
+  Lindsay2016 eps   => min<4.0 (pit shallowed to just below step)
 
 Slope DEM (7×7, 1 m resolution) — used for flow accumulation:
 
@@ -55,7 +55,7 @@ _BOWL = np.array([
     [5, 5, 5, 5, 5, 5, 5],
     [5, 5, 5, 5, 5, 5, 5],
     [5, 5, 9, 9, 9, 5, 5],
-    [5, 5, 9, 1, 4, 5, 5],   # pit at (3,3)=1; saddle at (3,4)=4
+    [5, 5, 9, 1, 4, 5, 5],   # pit at (3,3)=1; step at (3,4)=4
     [5, 5, 9, 9, 9, 5, 5],
     [5, 5, 5, 5, 5, 5, 5],
     [5, 5, 5, 5, 5, 5, 5],
