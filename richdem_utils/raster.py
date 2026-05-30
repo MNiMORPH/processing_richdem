@@ -2,7 +2,8 @@
 
 import numpy as np
 from osgeo import gdal
-import richdem as rd
+import richdem as rd  # safe: this module is only ever imported inside processAlgorithm,
+                      # after each algorithm's try/except richdem guard has already passed.
 
 _NO_DATA = -9999.0
 
