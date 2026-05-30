@@ -32,8 +32,10 @@ class BreachDepressionsAlgorithm(QgsProcessingAlgorithm):
         return (
             'Breach depressions in a DEM by carving least-cost channels '
             '(Lindsay 2016).\n\n'
-            'Enable "epsilon gradients" to shallow pits to just below the '
-            'saddle elevation rather than raising them to exactly the saddle.\n\n'
+            'The standard variant carves a flat-bottomed channel from the pit '
+            'to the nearest outlet. The epsilon variant tilts the channel '
+            'slightly downward from the outlet toward the pit, so flow is '
+            'directed inward rather than pooling on a flat breach path.\n\n'
             'Requires: pip install richdem'
         )
 
