@@ -1,5 +1,5 @@
 [general]
-name=RichDEM Terrain Analysis
+name=RichDEM
 qgisMinimumVersion=3.16
 description=Terrain analysis algorithms from the RichDEM library
 version=0.1.0
